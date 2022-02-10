@@ -46,7 +46,7 @@ def rename(path: PurePath, id: str, name: str):
 
 logger = setup_logger('mega')
 logger_download_fails = setup_logger("fails")
-to_search = ["eggs priority",  "Tokyo Revenger"]
+to_search = ["eggs priority", "blood c", "tokyo ghoul", "mirai nikki", "Boku No Hero", "Vinland Saga", "Tokyo Revenger"]
 
 
 def result(page_driver):
@@ -70,11 +70,10 @@ def result(page_driver):
                 Path(abs_path).mkdir(parents=True, exist_ok=True)
                 try:
                     logger.info("Starting download....")
-                    # r = mg.download_url(mega_link, abs_path.as_posix())
-                    # file_mime = r.name.split(".")[1]
-                    # mega_file_id = r.name.split(".")[0]
+                    r = mg.download_url(mega_link, abs_path.as_posix())
+                    mega_file_id = r.name.split(".")[0]
                     file_name = anime_title if is_ova else f'{anime_title} episode {episode}'
-                    # rename(abs_path, mega_file_id, file_name)
+                    rename(abs_path, mega_file_id, file_name)
                     logger.info(f"Download completed:{file_name}")
                 except:
                     logger_download_fails.error(traceback.print_exc())
