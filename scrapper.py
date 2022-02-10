@@ -88,7 +88,7 @@ with sync_playwright() as driver:
     scrapper_vars = config["Scrapper"]
     context = driver.chromium.launch_persistent_context(
         user_data_dir=user_temp,
-        headless=False,
+        headless=True,
         args=[
             f'--disable-extensions-except={pop_up_extension},{ad_block_extension}',
             f'--load-extension={pop_up_extension},{ad_block_extension}',
