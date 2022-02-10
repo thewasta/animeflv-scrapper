@@ -1,0 +1,3 @@
+mega.py >= 1.0
+Telethon >= 1.24
+playwright >= 1.18
