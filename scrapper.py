@@ -76,6 +76,7 @@ def result(page_driver):
         result_page.goto(f'{scrapper_vars["web"]}{href_element.get_attribute("href")}')
         episodes = result_page.locator(".List-Episodes div ul li")
         logger.info(episodes)
+        logger.info(episodes.count())
         for e in range(episodes.count()):
             link_episode = episodes.nth(e).locator("a").get_attribute("href")
             logger.info(link_episode)
