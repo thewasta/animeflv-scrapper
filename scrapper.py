@@ -88,6 +88,7 @@ def result(page_driver):
                         parse_json = json.loads(get_json_data)
                         get_mega_data = [x for x in parse_json['SUB'] if x["server"] == "mega"][0]
                         mega_link = get_mega_data["url"]
+                logger.info(mega_link)
                 if mega_link:
                     episode_element = result_page.locator(".Title-Episode").text_content()
                     episode = re.search("(\d){1,3}", episode_element).group()
@@ -95,8 +96,8 @@ def result(page_driver):
                     abs_path = PurePath(storage_path, "Anime", "Movie" if is_ova else "TV", anime_title)
                     Path(abs_path).mkdir(parents=True, exist_ok=True)
                     try:
+                        logger.info("Starting download....")
                         if not already_downloaded(abs_path, file_name):
-                            logger.info("Starting download....")
                             r = mg.download_url(mega_link, abs_path.as_posix())
                             mega_file_id = r.name.split(".")[0]
                             rename(abs_path, mega_file_id, file_name)
