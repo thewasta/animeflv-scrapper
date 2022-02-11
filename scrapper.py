@@ -75,11 +75,8 @@ def result(page_driver):
         result_page = context.new_page()
         result_page.goto(f'{scrapper_vars["web"]}{href_element.get_attribute("href")}')
         episodes = result_page.locator(".List-Episodes div ul li")
-        logger.info(episodes)
-        logger.info(episodes.count())
         for e in range(episodes.count()):
             link_episode = episodes.nth(e).locator("a").get_attribute("href")
-            logger.info(link_episode)
             if "#" != link_episode:
                 result_page.goto(f'{scrapper_vars["web"]}{episodes.nth(e).locator("a").get_attribute("href")}')
                 script_tags = result_page.locator("script")
@@ -92,7 +89,6 @@ def result(page_driver):
                         parse_json = json.loads(get_json_data)
                         get_mega_data = [x for x in parse_json['SUB'] if x["server"] == "mega"][0]
                         mega_link = get_mega_data["url"]
-                logger.info(mega_link)
                 if mega_link:
                     episode_element = result_page.locator(".Title-Episode").text_content()
                     episode = re.search("(\d){1,3}", episode_element).group()
@@ -100,13 +96,14 @@ def result(page_driver):
                     abs_path = PurePath(storage_path, "Anime", "Movie" if is_ova else "TV", anime_title)
                     Path(abs_path).mkdir(parents=True, exist_ok=True)
                     try:
-                        logger.info("Starting download....")
                         if not already_downloaded(abs_path, file_name):
+                            logger.info(f"Starting download.... {file_name}")
                             r = mg.download_url(mega_link, abs_path.as_posix())
                             mega_file_id = r.name.split(".")[0]
                             rename(abs_path, mega_file_id, file_name)
                             logger.info(f"Download completed:{file_name}")
                     except:
+                        logger_download_fails.error(f"failed downloading... {mega_link}")
                         logger_download_fails.error(traceback.print_exc())
                         pass
                 result_page.go_back()
