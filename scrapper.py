@@ -27,7 +27,7 @@ user_temp = "./tmp/user-data"
 storage_path = config["Config"]["storage"]
 
 mega = Mega()
-mg = mega.login()
+mg = mega.login(config["Mega"]["email"], config["Mega"]["password"])
 
 
 def setup_logger(name):
