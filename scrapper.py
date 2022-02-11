@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.8
 import configparser
+import json
 import logging
 import os
 import re
@@ -10,7 +11,14 @@ from pathlib import PurePath, Path
 
 from mega import Mega
 from playwright.sync_api import sync_playwright
+from random_user_agent.params import SoftwareName, OperatingSystem
+from random_user_agent.user_agent import UserAgent
 
+software_names = [SoftwareName.ANDROID.value]
+operating_systems = [OperatingSystem.ANDROID.value]
+user_agent_rotator = UserAgent(software_names=software_names, operating_systems=operating_systems, limit=10)
+user_agent = user_agent_rotator.get_random_user_agent()
+print(user_agent)
 config = configparser.ConfigParser()
 config.read("config.ini")
 pop_up_extension = "./Extensions/bkkbcggnhapdmkeljlodobbkopceiche/5.3.0_0"
@@ -19,7 +27,7 @@ user_temp = "./tmp/user-data"
 storage_path = config["Config"]["storage"]
 
 mega = Mega()
-mg = mega.login(config["Mega"]["email"], config["Mega"]["password"])
+mg = mega.login()
 
 
 def setup_logger(name):
@@ -49,35 +57,53 @@ logger_download_fails = setup_logger("fails")
 to_search = ["eggs priority", "blood c", "tokyo ghoul", "mirai nikki", "Boku No Hero", "Vinland Saga", "Tokyo Revenger"]
 
 
+def already_downloaded(abs_path: PurePath, file_name: str):
+    for file in os.listdir(abs_path):
+        if file_name in file:
+            print("YA HA SIDO DESCARGADO")
+
+
 def result(page_driver):
-    result_search = page_driver.locator(".ListAnimes.AX.Rows li")
+    result_search = page_driver.locator(".List-Animes li")
     for x in range(result_search.count()):
         anime = result_search.nth(x)
-        href_element = anime.locator("article > a")
-        is_ova = True if "OVA" in href_element.locator("div > span").text_content() else False
+        href_element = anime.locator("a")
+        is_ova = True if "OVA" in href_element.locator("figure > span").text_content() or \
+                         "Pelicula" in href_element.locator("figure > span").text_content() else False
         anime_title = href_element.locator(".Title").text_content()
         result_page = context.new_page()
         result_page.goto(f'{scrapper_vars["web"]}{href_element.get_attribute("href")}')
-        episodes = result_page.locator("#episodeList li")
+        episodes = result_page.locator(".List-Episodes div ul li")
         for e in range(episodes.count()):
             link_episode = episodes.nth(e).locator("a").get_attribute("href")
             if "#" != link_episode:
                 result_page.goto(f'{scrapper_vars["web"]}{episodes.nth(e).locator("a").get_attribute("href")}')
-                mega_link = result_page.locator("a[href*=mega]").get_attribute("href")
-                episode_element = result_page.locator("h2.SubTitle").text_content()
-                episode = re.search("(\d){1,3}", episode_element).group()
-                abs_path = PurePath(storage_path, "Anime", "Movie" if is_ova else "TV", anime_title)
-                Path(abs_path).mkdir(parents=True, exist_ok=True)
-                try:
-                    logger.info("Starting download....")
-                    r = mg.download_url(mega_link, abs_path.as_posix())
-                    mega_file_id = r.name.split(".")[0]
+                script_tags = result_page.locator("script")
+                mega_link = None
+                for s in range(script_tags.count()):
+                    if "anime_id" in script_tags.nth(s).text_content() and "episode_id" in script_tags.nth(
+                            s).text_content():
+                        raw_script = script_tags.nth(s).text_content()
+                        get_json_data = re.search("(?<=videos =).*", raw_script, re.IGNORECASE).group().replace(";", "")
+                        parse_json = json.loads(get_json_data)
+                        get_mega_data = [x for x in parse_json['SUB'] if x["server"] == "mega"][0]
+                        mega_link = get_mega_data["url"]
+                if mega_link:
+                    episode_element = result_page.locator(".Title-Episode").text_content()
+                    episode = re.search("(\d){1,3}", episode_element).group()
                     file_name = anime_title if is_ova else f'{anime_title} episode {episode}'
-                    rename(abs_path, mega_file_id, file_name)
-                    logger.info(f"Download completed:{file_name}")
-                except:
-                    logger_download_fails.error(traceback.print_exc())
-                    pass
+                    abs_path = PurePath(storage_path, "Anime", "Movie" if is_ova else "TV", anime_title)
+                    Path(abs_path).mkdir(parents=True, exist_ok=True)
+                    try:
+                        if not already_downloaded(abs_path, file_name):
+                            logger.info("Starting download....")
+                            r = mg.download_url(mega_link, abs_path.as_posix())
+                            mega_file_id = r.name.split(".")[0]
+                            rename(abs_path, mega_file_id, file_name)
+                            logger.info(f"Download completed:{file_name}")
+                    except:
+                        logger_download_fails.error(traceback.print_exc())
+                        pass
                 result_page.go_back()
         result_page.close()
 
@@ -86,6 +112,7 @@ with sync_playwright() as driver:
     logger.info("Start scrapper")
     scrapper_vars = config["Scrapper"]
     context = driver.chromium.launch_persistent_context(
+        user_agent=user_agent,
         user_data_dir=user_temp,
         headless=True,
         args=[
@@ -97,11 +124,12 @@ with sync_playwright() as driver:
     try:
         page = context.new_page()
         page.goto(scrapper_vars["web"] + "/browse")
-        [blank, scrapping, extension] = context.pages
-        extension.close()
-        blank.close()
+        for c in context.pages:
+            if "/browse" not in c.url:
+                c.close()
         for i in to_search:
-            page.fill("#search-anime", i)
+            page.click("[for=Input-Search]")
+            page.fill("#Input-Search", i)
             page.keyboard.press("Enter")
             result(page)
         page.goto(scrapper_vars["web"] + "/browse")
