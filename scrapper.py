@@ -60,7 +60,7 @@ to_search = ["eggs priority", "blood c", "tokyo ghoul", "mirai nikki", "Boku No 
 def already_downloaded(abs_path: PurePath, file_name: str):
     for file in os.listdir(abs_path):
         if file_name in file:
-            print("YA HA SIDO DESCARGADO")
+            return True
 
 
 def result(page_driver):
@@ -111,16 +111,20 @@ def result(page_driver):
 with sync_playwright() as driver:
     logger.info("Start scrapper")
     scrapper_vars = config["Scrapper"]
-    context = driver.chromium.launch_persistent_context(
-        user_agent=user_agent,
-        user_data_dir=user_temp,
-        headless=True,
-        args=[
-            f'--disable-extensions-except={pop_up_extension},{ad_block_extension}',
-            f'--load-extension={pop_up_extension},{ad_block_extension}',
-        ],
-        slow_mo=5000
-    )
+    try:
+        context = driver.chromium.launch_persistent_context(
+            user_agent=user_agent,
+            user_data_dir=user_temp,
+            headless=True,
+            args=[
+                f'--disable-extensions-except={pop_up_extension},{ad_block_extension}',
+                f'--load-extension={pop_up_extension},{ad_block_extension}',
+            ],
+            slow_mo=5000
+        )
+    except:
+        logger.error(traceback.print_exc())
+        raise "COULDN'T CREATE CONTEXT"
     try:
         page = context.new_page()
         page.goto(scrapper_vars["web"] + "/browse")
@@ -131,6 +135,7 @@ with sync_playwright() as driver:
             page.click("[for=Input-Search]")
             page.fill("#Input-Search", i)
             page.keyboard.press("Enter")
+            logger.info("Búsqueda realizada correctamente")
             result(page)
         page.goto(scrapper_vars["web"] + "/browse")
         result(page)
