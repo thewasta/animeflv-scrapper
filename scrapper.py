@@ -71,11 +71,13 @@ def result(page_driver):
         is_ova = True if "OVA" in href_element.locator("figure > span").text_content() or \
                          "Pelicula" in href_element.locator("figure > span").text_content() else False
         anime_title = href_element.locator(".Title").text_content()
+        logger.info(anime_title)
         result_page = context.new_page()
         result_page.goto(f'{scrapper_vars["web"]}{href_element.get_attribute("href")}')
         episodes = result_page.locator(".List-Episodes div ul li")
         for e in range(episodes.count()):
             link_episode = episodes.nth(e).locator("a").get_attribute("href")
+            logger.info(link_episode)
             if "#" != link_episode:
                 result_page.goto(f'{scrapper_vars["web"]}{episodes.nth(e).locator("a").get_attribute("href")}')
                 script_tags = result_page.locator("script")
