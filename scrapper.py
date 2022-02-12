@@ -93,7 +93,7 @@ def result(page_driver):
                     episode_element = result_page.locator(".Title-Episode").text_content()
                     episode = re.search("(\d){1,3}", episode_element).group()
                     file_name = anime_title if is_ova else f'{anime_title} episode {episode}'
-                    abs_path = PurePath(storage_path, "Anime", "Movie" if is_ova else "TV", anime_title)
+                    abs_path = PurePath(storage_path, "Anime", "Movies" if is_ova else "TV", anime_title)
                     Path(abs_path).mkdir(parents=True, exist_ok=True)
                     try:
                         if not already_downloaded(abs_path, file_name):
